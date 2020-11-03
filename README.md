@@ -1,2 +1,3 @@
 # webx
-web extended
+
+Web extended - another one http-request utility library 
