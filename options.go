@@ -1,21 +1,218 @@
 package webx
 
-import "net/http"
+import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"net/textproto"
+	"net/url"
+	"strings"
+)
 
-func getOpts(args []Option) (o options) {
-	o.client = http.DefaultClient
+var rxQuote = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
+
+func escQuotes(s string) string { return rxQuote.Replace(s) }
+
+func getOpts(args []Option) (o options, err error) {
 	o.method = http.MethodGet
+	o.addget = make(url.Values, 4)
+	o.setget = make(url.Values, 4)
+	o.addhead = make(http.Header, 4)
+	o.sethead = make(http.Header, 4)
+	o.form = make(map[string][]byte, 4)
+	o.file = make(map[string][]*formFile, 4)
 
 	for i := range args {
-		args[i](&o)
+		if err = args[i](&o); err != nil {
+			return
+		}
 	}
 
-	return o
+	return o, nil
 }
 
 type options struct {
-	method string
-	client *http.Client
+	user string
+	pass string
+	body io.Reader
+	form map[string][]byte
+	file map[string][]*formFile
+
+	method  string
+	addget  url.Values
+	setget  url.Values
+	addhead http.Header
+	sethead http.Header
+	client  *http.Client
+}
+
+func (o *options) Body() (_ io.Reader, err error) {
+	if o.method == http.MethodGet || o.method == http.MethodHead {
+		return nil, nil
+	}
+
+	if o.body != nil {
+		return o.body, nil
+	}
+
+	if err = o.makeForm(); err != nil {
+		return
+	}
+
+	return o.body, nil
+}
+
+func (o *options) makeForm() (err error) {
+	var flw io.Writer
+
+	buf := new(bytes.Buffer)
+	form := multipart.NewWriter(buf)
+
+	for field, data := range o.form {
+		if flw, err = form.CreateFormField(field); err != nil {
+			return ErrBadBody.WithReason(err)
+		}
+
+		if _, err = flw.Write(data); err != nil {
+			return ErrBadBody.WithReason(err)
+		}
+	}
+
+	for field := range o.file {
+		for i := range o.file[field] {
+			if flw, err = form.CreatePart(o.file[field][i].Header); err != nil {
+				return ErrBadBody.WithReason(err)
+			}
+
+			if _, err = flw.Write(o.file[field][i].Buffer); err != nil {
+				return ErrBadBody.WithReason(err)
+			}
+		}
+	}
+
+	o.sethead.Set(HeaderContentType, form.FormDataContentType())
+
+	if err = form.Close(); err != nil {
+		return ErrBadBody.WithReason(err)
+	}
+
+	o.body = buf
+	return nil
+}
+
+func Arg(name, value string) Option {
+	return func(o *options) error {
+		if name == "" {
+			return ErrBadOption.WithStack()
+		}
+
+		o.addget.Add(name, value)
+		return nil
+	}
+}
+
+func SetArg(name, value string) Option {
+	return func(o *options) error {
+		if name == "" {
+			return ErrBadOption.WithStack()
+		}
+
+		o.setget.Set(name, value)
+		return nil
+	}
+}
+
+func Auth(user, pass string) Option {
+	return func(o *options) error {
+		if user == "" {
+			return ErrBadOption.WithStack()
+		}
+
+		o.user = user
+		o.pass = pass
+		return nil
+	}
+}
+
+func Body(mime string, body io.Reader) Option {
+	return func(o *options) error {
+		if mime == "" {
+			return ErrBadOption.WithStack()
+		}
+
+		o.body = body
+		o.sethead.Set(HeaderContentType, mime)
+		return nil
+	}
+}
+
+func Field(name string, data []byte) Option {
+	return func(o *options) error {
+		if name == "" {
+			return ErrBadOption.WithStack()
+		}
+
+		o.form[name] = data
+		return nil
+	}
+}
+
+func FieldStr(name string, data string) Option {
+	return Field(name, []byte(data))
+}
+
+func FieldJSON(name string, data interface{}) Option {
+	return func(o *options) (err error) {
+		if name == "" {
+			return ErrBadOption.WithStack()
+		}
+
+		if o.form[name], err = json.Marshal(data); err != nil {
+			return ErrBadOption.WithReason(err)
+		}
+
+		return nil
+	}
+}
+
+func FieldFile(field string, file *File) Option {
+	return func(o *options) error {
+		if field == "" || file == nil || file.Name == "" {
+			return ErrBadOption.WithStack()
+		}
+
+		o.file[field] = append(o.file[field], newFormFile(field, file, false))
+		return nil
+	}
+}
+
+func FieldFileAsBase64(field string, file *File) Option {
+	return func(o *options) error {
+		if field == "" || file == nil || file.Name == "" {
+			return ErrBadOption.WithStack()
+		}
+
+		o.file[field] = append(o.file[field], newFormFile(field, file, true))
+		return nil
+	}
+}
+
+func JSON(item interface{}) Option {
+	return func(o *options) (err error) {
+		var buf []byte
+
+		if buf, err = json.Marshal(item); err != nil {
+			return ErrBadOption.WithReason(err)
+		}
+
+		o.body = bytes.NewReader(buf)
+		o.sethead.Set(HeaderContentType, MimeJSON)
+		return nil
+	}
 }
 
 func Client(c *http.Client) Option {
@@ -25,6 +222,28 @@ func Client(c *http.Client) Option {
 		}
 
 		o.client = c
+		return nil
+	}
+}
+
+func Header(name, value string) Option {
+	return func(o *options) error {
+		if name == "" {
+			return ErrBadOption.WithStack()
+		}
+
+		o.addhead.Add(name, value)
+		return nil
+	}
+}
+
+func SetHeader(name, value string) Option {
+	return func(o *options) error {
+		if name == "" {
+			return ErrBadOption.WithStack()
+		}
+
+		o.sethead.Set(name, value)
 		return nil
 	}
 }
@@ -46,3 +265,34 @@ func HEAD() Option   { return Method(http.MethodHead) }
 func POST() Option   { return Method(http.MethodPost) }
 func PATCH() Option  { return Method(http.MethodPatch) }
 func DELETE() Option { return Method(http.MethodDelete) }
+
+func newFormFile(field string, file *File, as64 bool) *formFile {
+	const tpl = `form-data; name="%s"; filename="%s"`
+
+	f := &formFile{
+		Header: make(textproto.MIMEHeader),
+	}
+
+	f.Header.Set(HeaderContentDisp, fmt.Sprintf(tpl, escQuotes(field), escQuotes(file.Name)))
+
+	if file.Mime == "" {
+		f.Header.Set(HeaderContentType, MimeUnknown)
+	} else {
+		f.Header.Set(HeaderContentType, file.Mime)
+	}
+
+	if as64 {
+		f.Buffer = make([]byte, base64.StdEncoding.EncodedLen(len(file.Data)))
+		base64.StdEncoding.Encode(f.Buffer, file.Data)
+		f.Header.Set(HeaderContentEnc, "base64")
+	} else {
+		f.Buffer = file.Data
+	}
+
+	return f
+}
+
+type formFile struct {
+	Buffer []byte
+	Header textproto.MIMEHeader
+}
