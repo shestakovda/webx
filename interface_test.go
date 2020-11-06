@@ -54,6 +54,7 @@ func (s *WebxSuite) TestBase() {
 	s.Require().NoError(err)
 
 	// Базовое сравнение ответа
+	s.Equal(s.srv.URL+"/base/test/", res.URL())
 	s.Equal(http.StatusOK, res.Code())
 	s.Equal([]byte(msg), res.Body())
 	s.Equal(msg, res.Text())

@@ -25,6 +25,7 @@ type Request interface {
 }
 
 type Response interface {
+	URL() string
 	Code() int
 	Body() []byte
 	Text() string

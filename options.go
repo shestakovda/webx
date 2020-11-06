@@ -11,6 +11,8 @@ import (
 	"net/textproto"
 	"net/url"
 	"strings"
+
+	"github.com/shestakovda/errx"
 )
 
 var rxQuote = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
@@ -179,24 +181,41 @@ func FieldJSON(name string, data interface{}) Option {
 	}
 }
 
-func FieldFile(field string, file *File) Option {
+func FieldFile(field string, files ...*File) Option {
 	return func(o *options) error {
-		if field == "" || file == nil || file.Name == "" {
+		if field == "" || len(files) == 0 {
 			return ErrBadOption.WithStack()
 		}
 
-		o.file[field] = append(o.file[field], newFormFile(field, file, false))
+		for i := range files {
+			if files[i] == nil || files[i].Name == "" {
+				return ErrBadOption.WithStack().WithDebug(errx.Debug{
+					"index": i,
+				})
+			}
+
+			o.file[field] = append(o.file[field], newFormFile(field, files[i], false))
+		}
+
 		return nil
 	}
 }
 
-func FieldFileAsBase64(field string, file *File) Option {
+func FieldFileAsBase64(field string, files ...*File) Option {
 	return func(o *options) error {
-		if field == "" || file == nil || file.Name == "" {
+		if field == "" || len(files) == 0 {
 			return ErrBadOption.WithStack()
 		}
 
-		o.file[field] = append(o.file[field], newFormFile(field, file, true))
+		for i := range files {
+			if files[i] == nil || files[i].Name == "" {
+				return ErrBadOption.WithStack().WithDebug(errx.Debug{
+					"index": i,
+				})
+			}
+
+			o.file[field] = append(o.file[field], newFormFile(field, files[i], true))
+		}
 		return nil
 	}
 }
