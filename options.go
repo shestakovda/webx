@@ -313,7 +313,8 @@ func newFormFile(field string, file *File, as64 bool) *formFile {
 		base64.StdEncoding.Encode(f.Buffer, file.Data)
 		f.Header.Set(HeaderContentEnc, "base64")
 	} else {
-		f.Buffer = file.Data
+		f.Buffer = make([]byte, len(file.Data))
+		copy(f.Buffer, file.Data)
 	}
 
 	return f
