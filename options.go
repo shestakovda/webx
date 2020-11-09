@@ -182,14 +182,14 @@ func FieldJSON(name string, data interface{}) Option {
 	}
 }
 
-func FieldFile(field string, files ...*File) Option {
+func FieldFile(field string, files ...File) Option {
 	return func(o *options) error {
 		if field == "" || len(files) == 0 {
 			return ErrBadOption.WithStack()
 		}
 
 		for i := range files {
-			if files[i] == nil || files[i].Name == "" {
+			if files[i].Name == "" {
 				return ErrBadOption.WithStack().WithDebug(errx.Debug{
 					"index": i,
 				})
@@ -202,14 +202,14 @@ func FieldFile(field string, files ...*File) Option {
 	}
 }
 
-func FieldFileAsBase64(field string, files ...*File) Option {
+func FieldFileAsBase64(field string, files ...File) Option {
 	return func(o *options) error {
 		if field == "" || len(files) == 0 {
 			return ErrBadOption.WithStack()
 		}
 
 		for i := range files {
-			if files[i] == nil || files[i].Name == "" {
+			if files[i].Name == "" {
 				return ErrBadOption.WithStack().WithDebug(errx.Debug{
 					"index": i,
 				})
@@ -293,7 +293,7 @@ func Debug() Option {
 	}
 }
 
-func newFormFile(field string, file *File, as64 bool) *formFile {
+func newFormFile(field string, file File, as64 bool) *formFile {
 	const tpl = `form-data; name="%s"; filename="%s"`
 
 	f := &formFile{

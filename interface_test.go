@@ -180,8 +180,8 @@ func (s *WebxSuite) TestFormError() {
 		webx.Client(http.DefaultClient),
 		webx.FieldStr("text", "message"),
 		webx.FieldJSON("json", &dummy{"awful"}),
-		webx.FieldFile("file", &webx.File{Name: "f1", Data: []byte("text1")}),
-		webx.FieldFileAsBase64("b64", &webx.File{Name: "f2", Data: []byte(`{"ololo": "purpur"}`)}),
+		webx.FieldFile("file", webx.File{Name: "f1", Data: []byte("text1")}),
+		webx.FieldFileAsBase64("b64", webx.File{Name: "f2", Data: []byte(`{"ololo": "purpur"}`)}),
 	); s.Error(err) {
 		s.True(errx.Is(err, errx.ErrForbidden))
 
@@ -276,19 +276,19 @@ func (s *WebxSuite) TestOptions() {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 
-	if _, err := webx.NewRequest(uri, webx.FieldFile("", nil)); s.Error(err) {
+	if _, err := webx.NewRequest(uri, webx.FieldFile("", webx.File{})); s.Error(err) {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 
-	if _, err := webx.NewRequest(uri, webx.FieldFile("test", nil)); s.Error(err) {
+	if _, err := webx.NewRequest(uri, webx.FieldFile("test", webx.File{})); s.Error(err) {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 
-	if _, err := webx.NewRequest(uri, webx.FieldFileAsBase64("", nil)); s.Error(err) {
+	if _, err := webx.NewRequest(uri, webx.FieldFileAsBase64("", webx.File{})); s.Error(err) {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 
-	if _, err := webx.NewRequest(uri, webx.FieldFileAsBase64("test", nil)); s.Error(err) {
+	if _, err := webx.NewRequest(uri, webx.FieldFileAsBase64("test", webx.File{})); s.Error(err) {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 
