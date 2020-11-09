@@ -103,7 +103,7 @@ func (o *options) makeForm() (err error) {
 		return ErrBadBody.WithReason(err)
 	}
 
-	o.body = buf
+	o.body = bytes.NewReader(buf.Bytes())
 	return nil
 }
 
