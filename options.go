@@ -44,6 +44,7 @@ type options struct {
 	form map[string][]byte
 	file map[string][]*formFile
 
+	debug   bool
 	method  string
 	addget  url.Values
 	setget  url.Values
@@ -285,6 +286,13 @@ func POST() Option   { return Method(http.MethodPost) }
 func PATCH() Option  { return Method(http.MethodPatch) }
 func DELETE() Option { return Method(http.MethodDelete) }
 
+func Debug() Option {
+	return func(o *options) error {
+		o.debug = true
+		return nil
+	}
+}
+
 func newFormFile(field string, file *File, as64 bool) *formFile {
 	const tpl = `form-data; name="%s"; filename="%s"`
 
@@ -292,7 +300,7 @@ func newFormFile(field string, file *File, as64 bool) *formFile {
 		Header: make(textproto.MIMEHeader),
 	}
 
-	f.Header.Set(HeaderContentDisp, fmt.Sprintf(tpl, escQuotes(field), escQuotes(file.Name)))
+	f.Header.Set(HeaderContentDisp, fmt.Sprintf(tpl, escQuotes(field), url.PathEscape(file.Name)))
 
 	if file.Mime == "" {
 		f.Header.Set(HeaderContentType, MimeUnknown)

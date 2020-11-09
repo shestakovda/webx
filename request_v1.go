@@ -3,6 +3,7 @@ package webx
 import (
 	"io"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strings"
 	"time"
@@ -157,6 +158,17 @@ func (c v1Request) do(req *http.Request, opts *options) (_ *v1Response, err erro
 	} else {
 		// Если нигде указан - используем умолчания
 		client = defClient
+	}
+
+	if c.opts.debug || opts.debug {
+		var dump []byte
+
+		if dump, err = httputil.DumpRequestOut(req, true); err != nil {
+			return nil, ErrBadRequest.WithReason(err)
+		}
+
+		glog.Errorf("webx.Request = %s", dump)
+		glog.Flush()
 	}
 
 	if resp, err = client.Do(req); err != nil {
