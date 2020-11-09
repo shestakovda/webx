@@ -153,6 +153,28 @@ func Body(mime string, body io.Reader) Option {
 	}
 }
 
+func Files(files map[string][]File) Option {
+	return func(o *options) error {
+		if len(files) == 0 {
+			return ErrBadOption.WithStack()
+		}
+
+		for field := range files {
+			for i := range files[field] {
+				if files[field][i].Name == "" {
+					return ErrBadOption.WithStack().WithDebug(errx.Debug{
+						"index": i,
+					})
+				}
+
+				o.file[field] = append(o.file[field], newFormFile(field, files[field][i], false))
+			}
+		}
+
+		return nil
+	}
+}
+
 func Field(name string, data []byte) Option {
 	return func(o *options) error {
 		if name == "" {
