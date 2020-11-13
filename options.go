@@ -2,6 +2,7 @@ package webx
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -51,6 +52,8 @@ type options struct {
 	addhead http.Header
 	sethead http.Header
 	client  *http.Client
+
+	ctx context.Context
 }
 
 func (o *options) Body() (_ io.Reader, err error) {
@@ -107,7 +110,7 @@ func (o *options) makeForm() (err error) {
 	return nil
 }
 
-func Arg(name, value string) Option {
+func AppendArg(name, value string) Option {
 	return func(o *options) error {
 		if name == "" {
 			return ErrBadOption.WithStack()
@@ -118,7 +121,7 @@ func Arg(name, value string) Option {
 	}
 }
 
-func SetArg(name, value string) Option {
+func ReplaceArg(name, value string) Option {
 	return func(o *options) error {
 		if name == "" {
 			return ErrBadOption.WithStack()
@@ -153,7 +156,7 @@ func Body(mime string, body io.Reader) Option {
 	}
 }
 
-func Files(files map[string][]File) Option {
+func Files(files map[string][]*File) Option {
 	return func(o *options) error {
 		if len(files) == 0 {
 			return ErrBadOption.WithStack()
@@ -161,7 +164,7 @@ func Files(files map[string][]File) Option {
 
 		for field := range files {
 			for i := range files[field] {
-				if files[field][i].Name == "" {
+				if files[field][i] == nil || files[field][i].Name == "" {
 					return ErrBadOption.WithStack().WithDebug(errx.Debug{
 						"index": i,
 					})
@@ -204,14 +207,14 @@ func FieldJSON(name string, data interface{}) Option {
 	}
 }
 
-func FieldFile(field string, files ...File) Option {
+func FieldFile(field string, files ...*File) Option {
 	return func(o *options) error {
 		if field == "" || len(files) == 0 {
 			return ErrBadOption.WithStack()
 		}
 
 		for i := range files {
-			if files[i].Name == "" {
+			if files[i] == nil || files[i].Name == "" {
 				return ErrBadOption.WithStack().WithDebug(errx.Debug{
 					"index": i,
 				})
@@ -224,14 +227,14 @@ func FieldFile(field string, files ...File) Option {
 	}
 }
 
-func FieldFileAsBase64(field string, files ...File) Option {
+func FieldFileAsBase64(field string, files ...*File) Option {
 	return func(o *options) error {
 		if field == "" || len(files) == 0 {
 			return ErrBadOption.WithStack()
 		}
 
 		for i := range files {
-			if files[i].Name == "" {
+			if files[i] == nil || files[i].Name == "" {
 				return ErrBadOption.WithStack().WithDebug(errx.Debug{
 					"index": i,
 				})
@@ -268,7 +271,7 @@ func Client(c *http.Client) Option {
 	}
 }
 
-func Header(name, value string) Option {
+func AppendHeader(name, value string) Option {
 	return func(o *options) error {
 		if name == "" {
 			return ErrBadOption.WithStack()
@@ -279,7 +282,7 @@ func Header(name, value string) Option {
 	}
 }
 
-func SetHeader(name, value string) Option {
+func ReplaceHeader(name, value string) Option {
 	return func(o *options) error {
 		if name == "" {
 			return ErrBadOption.WithStack()
@@ -315,7 +318,14 @@ func Debug() Option {
 	}
 }
 
-func newFormFile(field string, file File, as64 bool) *formFile {
+func Context(ctx context.Context) Option {
+	return func(o *options) error {
+		o.ctx = ctx
+		return nil
+	}
+}
+
+func newFormFile(field string, file *File, as64 bool) *formFile {
 	const tpl = `form-data; name="%s"; filename="%s"`
 
 	f := &formFile{
@@ -335,8 +345,7 @@ func newFormFile(field string, file File, as64 bool) *formFile {
 		base64.StdEncoding.Encode(f.Buffer, file.Data)
 		f.Header.Set(HeaderContentEnc, "base64")
 	} else {
-		f.Buffer = make([]byte, len(file.Data))
-		copy(f.Buffer, file.Data)
+		f.Buffer = file.Data
 	}
 
 	return f

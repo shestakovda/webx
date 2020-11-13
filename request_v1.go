@@ -60,7 +60,13 @@ func (c v1Request) Make(ref string, args ...Option) (_ Response, err error) {
 
 	addr := strings.TrimRight(c.base.String(), "/") + "/" + strings.TrimLeft(strings.TrimSpace(ref), "/")
 
-	if req, err = http.NewRequest(opts.method, addr, body); err != nil {
+	if opts.ctx == nil {
+		req, err = http.NewRequest(opts.method, addr, body)
+	} else {
+		req, err = http.NewRequestWithContext(opts.ctx, opts.method, addr, body)
+	}
+
+	if err != nil {
 		return nil, ErrBadRequest.WithReason(err).WithDebug(errx.Debug{
 			"URL":    addr,
 			"Method": opts.method,

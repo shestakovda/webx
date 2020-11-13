@@ -103,7 +103,7 @@ func (r v1Response) Error() error {
 
 	return err.WithDebug(errx.Debug{
 		"Код":   r.code,
-		"URL":   r.base.URL,
+		"URL":   r.base.URL.String(),
 		"Ответ": string(r.body),
 	})
 }

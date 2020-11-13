@@ -2,6 +2,7 @@ package webx_test
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -64,12 +65,12 @@ func (s *WebxSuite) TestArgsHeaders() {
 	// Формируем базовый запрос
 	req, err := webx.NewRequest(
 		s.srv.URL+"/base",
-		webx.Arg("key1", "val1"),
-		webx.Arg("key2", "val2"),
-		webx.SetArg("key3", "val3"),
-		webx.Header("key4", "val4"),
-		webx.Header("key5", "val5"),
-		webx.SetHeader("key6", "val6"),
+		webx.AppendArg("key1", "val1"),
+		webx.AppendArg("key2", "val2"),
+		webx.ReplaceArg("key3", "val3"),
+		webx.AppendHeader("key4", "val4"),
+		webx.AppendHeader("key5", "val5"),
+		webx.ReplaceHeader("key6", "val6"),
 	)
 	s.Require().NoError(err)
 
@@ -87,10 +88,10 @@ func (s *WebxSuite) TestArgsHeaders() {
 	res, err := req.Make(
 		"test/",
 		webx.HEAD(),
-		webx.Arg("key2", "val7"),
-		webx.SetArg("key3", "val8"),
-		webx.Header("key5", "val9"),
-		webx.SetHeader("key6", "val10"),
+		webx.AppendArg("key2", "val7"),
+		webx.ReplaceArg("key3", "val8"),
+		webx.AppendHeader("key5", "val9"),
+		webx.ReplaceHeader("key6", "val10"),
 	)
 	s.Require().NoError(err)
 
@@ -178,10 +179,11 @@ func (s *WebxSuite) TestFormError() {
 		webx.PUT(),
 		webx.Auth("test", "pass"),
 		webx.Client(http.DefaultClient),
+		webx.Context(context.Background()),
 		webx.FieldStr("text", "message"),
 		webx.FieldJSON("json", &dummy{"awful"}),
-		webx.FieldFile("file", webx.File{Name: "f1", Data: []byte("text1")}),
-		webx.FieldFileAsBase64("b64", webx.File{Name: "f2", Data: []byte(`{"ololo": "purpur"}`)}),
+		webx.FieldFile("file", &webx.File{Name: "f1", Data: []byte("text1")}),
+		webx.FieldFileAsBase64("b64", &webx.File{Name: "f2", Data: []byte(`{"ololo": "purpur"}`)}),
 	); s.Error(err) {
 		s.True(errx.Is(err, errx.ErrForbidden))
 
@@ -248,11 +250,11 @@ func (s *WebxSuite) TestFileResp() {
 func (s *WebxSuite) TestOptions() {
 	const uri = "http://example.com"
 
-	if _, err := webx.NewRequest(uri, webx.Arg("", "")); s.Error(err) {
+	if _, err := webx.NewRequest(uri, webx.AppendArg("", "")); s.Error(err) {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 
-	if _, err := webx.NewRequest(uri, webx.SetArg("", "")); s.Error(err) {
+	if _, err := webx.NewRequest(uri, webx.ReplaceArg("", "")); s.Error(err) {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 
@@ -276,19 +278,19 @@ func (s *WebxSuite) TestOptions() {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 
-	if _, err := webx.NewRequest(uri, webx.FieldFile("", webx.File{})); s.Error(err) {
+	if _, err := webx.NewRequest(uri, webx.FieldFile("", nil)); s.Error(err) {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 
-	if _, err := webx.NewRequest(uri, webx.FieldFile("test", webx.File{})); s.Error(err) {
+	if _, err := webx.NewRequest(uri, webx.FieldFile("test", nil)); s.Error(err) {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 
-	if _, err := webx.NewRequest(uri, webx.FieldFileAsBase64("", webx.File{})); s.Error(err) {
+	if _, err := webx.NewRequest(uri, webx.FieldFileAsBase64("", nil)); s.Error(err) {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 
-	if _, err := webx.NewRequest(uri, webx.FieldFileAsBase64("test", webx.File{})); s.Error(err) {
+	if _, err := webx.NewRequest(uri, webx.FieldFileAsBase64("test", nil)); s.Error(err) {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 
@@ -296,11 +298,11 @@ func (s *WebxSuite) TestOptions() {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 
-	if _, err := webx.NewRequest(uri, webx.Header("", "")); s.Error(err) {
+	if _, err := webx.NewRequest(uri, webx.AppendHeader("", "")); s.Error(err) {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 
-	if _, err := webx.NewRequest(uri, webx.SetHeader("", "")); s.Error(err) {
+	if _, err := webx.NewRequest(uri, webx.ReplaceHeader("", "")); s.Error(err) {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 
