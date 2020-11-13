@@ -152,7 +152,7 @@ func (c v1Request) applyHeaders(req *http.Request, opts *options) error {
 	return nil
 }
 
-func (c v1Request) do(req *http.Request, opts *options) (_ *v1Response, err error) {
+func (c v1Request) do(req *http.Request, opts *options) (_ Response, err error) {
 	var resp *http.Response
 	var client *http.Client
 

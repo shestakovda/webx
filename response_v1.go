@@ -37,11 +37,11 @@ type v1Response struct {
 	base *http.Request
 }
 
-func (r *v1Response) URL() string  { return r.base.URL.String() }
-func (r *v1Response) Code() int    { return r.code }
-func (r *v1Response) Body() []byte { return r.body }
-func (r *v1Response) Text() string { return string(r.body) }
-func (r *v1Response) File() (_ *File, err error) {
+func (r v1Response) URL() string  { return r.base.URL.String() }
+func (r v1Response) Code() int    { return r.code }
+func (r v1Response) Body() []byte { return r.body }
+func (r v1Response) Text() string { return string(r.body) }
+func (r v1Response) File() (_ *File, err error) {
 	var cdh map[string]string
 
 	if disp := r.head.Get(HeaderContentDisp); disp != "" {
@@ -74,7 +74,7 @@ func (r *v1Response) File() (_ *File, err error) {
 		Data: r.body,
 	}, nil
 }
-func (r *v1Response) JSON(item interface{}) (err error) {
+func (r v1Response) JSON(item interface{}) (err error) {
 	if err = json.Unmarshal(r.body, item); err != nil {
 		return ErrBadResponse.WithReason(err).WithDebug(errx.Debug{
 			"Ответ": string(r.body),
@@ -83,7 +83,7 @@ func (r *v1Response) JSON(item interface{}) (err error) {
 
 	return nil
 }
-func (r *v1Response) Error() error {
+func (r v1Response) Error() error {
 	var err errx.Error
 
 	switch r.code {
