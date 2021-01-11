@@ -326,7 +326,7 @@ func Context(ctx context.Context) Option {
 }
 
 func newFormFile(field string, file *File, as64 bool) *formFile {
-	const tpl = `form-data; name="%s"; filename="%s"`
+	const tpl = `form-data; name="%s"; filename*="UTF-8''%s"`
 
 	f := &formFile{
 		Header: make(textproto.MIMEHeader),
