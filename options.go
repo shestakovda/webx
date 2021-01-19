@@ -332,7 +332,7 @@ func newFormFile(field string, file *File, as64 bool) *formFile {
 		Header: make(textproto.MIMEHeader),
 	}
 
-	f.Header.Set(HeaderContentDisp, fmt.Sprintf(tpl, escQuotes(field), escQuotes(file.Name), url.PathEscape(file.Name)))
+	f.Header.Set(HeaderContentDisp, fmt.Sprintf(tpl, escQuotes(field), url.PathEscape(file.Name), url.PathEscape(file.Name)))
 
 	if file.Mime == "" {
 		f.Header.Set(HeaderContentType, MimeUnknown)
