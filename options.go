@@ -326,13 +326,19 @@ func Context(ctx context.Context) Option {
 }
 
 func newFormFile(field string, file *File, as64 bool) *formFile {
-	const tpl = `form-data; name="%s"; filename="%s" filename*="utf-8''%s"`
+	const stdTpl = `form-data; name="%s"; filename="%s"`
+	const escTpl = `form-data; name="%s"; filename="%s" filename*="utf-8''%s"`
 
 	f := &formFile{
 		Header: make(textproto.MIMEHeader),
 	}
 
-	f.Header.Set(HeaderContentDisp, fmt.Sprintf(tpl, escQuotes(field), url.PathEscape(file.Name), url.PathEscape(file.Name)))
+	if file.Escape {
+		escName := url.PathEscape(file.Name)
+		f.Header.Set(HeaderContentDisp, fmt.Sprintf(escTpl, escQuotes(field), escName, escName))
+	} else {
+		f.Header.Set(HeaderContentDisp, fmt.Sprintf(stdTpl, escQuotes(field), escQuotes(file.Name)))
+	}
 
 	if file.Mime == "" {
 		f.Header.Set(HeaderContentType, MimeUnknown)

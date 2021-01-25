@@ -35,9 +35,10 @@ type Response interface {
 }
 
 type File struct {
-	Name string
-	Mime string
-	Data []byte
+	Name   string
+	Mime   string
+	Data   []byte
+	Escape bool
 }
 
 type Option func(*options) error
