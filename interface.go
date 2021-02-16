@@ -1,7 +1,12 @@
 package webx
 
-import "github.com/shestakovda/errx"
+import (
+	"net/http"
 
+	"github.com/shestakovda/errx"
+)
+
+//goland:noinspection GoUnusedConst
 const (
 	HeaderXAPIKey       = "X-API-Key"
 	HeaderContentEnc    = "Content-Transfer-Encoding"
@@ -32,6 +37,7 @@ type Response interface {
 	File() (*File, error)
 	JSON(interface{}) error
 	Error() error
+	Headers() http.Header
 }
 
 type File struct {

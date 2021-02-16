@@ -37,10 +37,11 @@ type v1Response struct {
 	base *http.Request
 }
 
-func (r v1Response) URL() string  { return r.base.URL.String() }
-func (r v1Response) Code() int    { return r.code }
-func (r v1Response) Body() []byte { return r.body }
-func (r v1Response) Text() string { return string(r.body) }
+func (r v1Response) URL() string          { return r.base.URL.String() }
+func (r v1Response) Code() int            { return r.code }
+func (r v1Response) Body() []byte         { return r.body }
+func (r v1Response) Text() string         { return string(r.body) }
+func (r v1Response) Headers() http.Header { return r.head }
 func (r v1Response) File() (_ *File, err error) {
 	var cdh map[string]string
 

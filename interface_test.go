@@ -9,8 +9,9 @@ import (
 	"testing"
 
 	"github.com/shestakovda/errx"
-	"github.com/shestakovda/webx"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/shestakovda/webx"
 )
 
 func TestWebx(t *testing.T) {
@@ -136,7 +137,7 @@ func (s *WebxSuite) TestFormError() {
 	const msg = `suck a lemon!`
 
 	// Формируем базовый запрос
-	req, err := webx.NewRequest(s.srv.URL + "/base/")
+	req, err := webx.NewRequest(s.srv.URL+"/base/", webx.DELETE())
 	s.Require().NoError(err)
 
 	// Запрос без всяких доп.параметров
@@ -202,8 +203,10 @@ func (s *WebxSuite) TestFileResp() {
 	// Формируем базовый запрос
 	req, err := webx.NewRequest(
 		s.srv.URL+"/base/",
+		webx.GET(),
 		webx.Auth("test", "pass"),
 		webx.Client(http.DefaultClient),
+		webx.Debug(),
 	)
 	s.Require().NoError(err)
 
@@ -247,6 +250,7 @@ func (s *WebxSuite) TestFileResp() {
 	}
 }
 
+//nolint:funlen
 func (s *WebxSuite) TestOptions() {
 	const uri = "http://example.com"
 
@@ -307,6 +311,10 @@ func (s *WebxSuite) TestOptions() {
 	}
 
 	if _, err := webx.NewRequest(uri, webx.Method("")); s.Error(err) {
+		s.True(errx.Is(err, webx.ErrBadOption))
+	}
+
+	if _, err := webx.NewRequest(uri, webx.Files(nil)); s.Error(err) {
 		s.True(errx.Is(err, webx.ErrBadOption))
 	}
 }

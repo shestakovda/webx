@@ -85,7 +85,6 @@ func (c v1Request) Make(ref string, args ...Option) (_ Response, err error) {
 }
 
 func (c v1Request) applyGetArgs(req *http.Request, opts *options) error {
-
 	// Возможно, какие-то аргументы уже указаны в запросе
 	args := req.URL.Query()
 
@@ -156,14 +155,12 @@ func (c v1Request) do(req *http.Request, opts *options) (_ Response, err error) 
 	var resp *http.Response
 	var client *http.Client
 
-	if opts.client != nil {
-		// Если в самом запросе указан клиент, используем его
+	switch {
+	case opts.client != nil: // Если в самом запросе указан клиент, используем его
 		client = opts.client
-	} else if c.opts.client != nil {
-		// Если в базовом запросе указан клиент, используем его
+	case c.opts.client != nil: // Если в базовом запросе указан клиент, используем его
 		client = c.opts.client
-	} else {
-		// Если нигде указан - используем умолчания
+	default: // Если нигде указан - используем умолчания
 		client = defClient
 	}
 
@@ -176,14 +173,30 @@ func (c v1Request) do(req *http.Request, opts *options) (_ Response, err error) 
 
 		glog.Errorf("webx.Request = %s", dump)
 		glog.Flush()
-	}
 
+		defer func() {
+			if resp != nil {
+				if dump, err = httputil.DumpResponse(resp, false); err == nil {
+					glog.Errorf("webx.Response = %s", dump)
+					glog.Flush()
+				}
+			}
+		}()
+	}
 	if resp, err = client.Do(req); err != nil {
-		return nil, ErrBadRequest.WithReason(err).WithDebug(errx.Debug{
-			"URL":    req.URL.String(),
-			"Method": req.Method,
-			"Length": req.ContentLength,
-		})
+		dbg := errx.Debug{
+			"URL":       req.URL.String(),
+			"Method":    req.Method,
+			"ReqHeader": req.Header,
+			"Length":    req.ContentLength,
+		}
+
+		if resp != nil {
+			dbg["Status"] = resp.Status
+			dbg["ResHeaders"] = resp.Header
+		}
+
+		return nil, ErrBadRequest.WithReason(err).WithDebug(dbg)
 	}
 
 	return newResponseV1(req, resp)
